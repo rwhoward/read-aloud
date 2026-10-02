@@ -1,18 +1,18 @@
 # Conversion examples
 
-Each example shows a source excerpt and the HTML fragment it becomes. Notice that every fact survives, nothing is invented, and the output usually runs longer than the input.
+Each example shows a source excerpt and the HTML fragment it becomes. Notice that every fact survives, nothing is invented, and the output usually runs longer than the input. Wherever a figure appears, the narration before it has already said everything in it, because Read Aloud skips figures.
 
-## 1. Opening orientation
+## 1. The opening
 
 The source is a three-section design doc titled "Session Token Refresh Redesign", from the `billing-portal` repo, dated 2026-09-30.
 
 ```html
 <h1>The problem and its cause</h1>
-<p>This is a listenable version of the session token refresh redesign, a design document from the billing portal repo written on September 30th, 2026. It explains why users are being logged out in the middle of their sessions, the fix the team settled on, and how that fix will roll out.</p>
+<p>Users of the billing portal are being logged out in the middle of their sessions. This design doc, from September 30th, 2026, explains why, lays out the fix the team settled on, and plans how it will roll out.</p>
 <p>It comes in three parts. This first part covers the problem and what's causing it. Part two walks through the new refresh flow. Part three covers the rollout plan and the questions that are still open.</p>
 ```
 
-The opening says what the document is, where it came from, and the shape of what's coming, then gets out of the way.
+The opening goes straight to the content: what's wrong and what the document does about it. Then it gives the map of the parts. It doesn't announce that this is a listenable version, describe how the source was formatted, or comment on the document's title.
 
 ## 2. A bullet list of fragments
 
@@ -52,12 +52,20 @@ Source:
 Output:
 
 ```html
-<p>There are three environments, and they differ in three ways: how many instances they run, their request timeout, and whether they scale automatically.</p>
+<p>There are three environments, and they differ in three ways: how many instances they run, their timeout, and whether they scale automatically. The table is shown below.</p>
 <p>Development runs a single instance with a 30 second timeout, and it doesn't autoscale. Staging runs two instances, keeps the same 30 second timeout, and does autoscale. Production runs four instances and autoscales, and its timeout is much tighter, at 10 seconds.</p>
 <p>So apart from its size, what makes production different is that shorter timeout.</p>
+<figure>
+<table>
+  <tr><th>Environment</th><th>Instances</th><th>Timeout</th><th>Autoscale</th></tr>
+  <tr><td>dev</td><td>1</td><td>30s</td><td>no</td></tr>
+  <tr><td>staging</td><td>2</td><td>30s</td><td>yes</td></tr>
+  <tr><td>prod</td><td>4</td><td>10s</td><td>yes</td></tr>
+</table>
+</figure>
 ```
 
-The table is introduced before it's walked, every value is voiced, and the closing line points out the pattern a reader would have spotted at a glance.
+The opening says what the table compares and that it's on screen, every value is voiced, and the closing line points out the pattern a reader would have spotted at a glance. The original table follows the whole tour in a figure. Read Aloud skips it, and the narration has already covered everything in it.
 
 ## 4. A code block
 
@@ -77,26 +85,27 @@ export async function refreshToken(userId: string) {
 ```
 ````
 
-Narration:
+Output:
 
 ```html
-<p>The refresh token function takes a user ID and makes sure that user ends up with a token that's good for at least another minute. The exact code is on the reference card.</p>
-<p>It starts by looking up the user's current token in the token store. If there's no token at all, or the token expires within the next 60 seconds, it asks the auth client for a fresh token. It passes along the old token's refresh token, if there was an old token. Then it saves the fresh token back to the token store and returns it.</p>
-<p>If the existing token still has more than a minute left, the function returns it unchanged.</p>
-```
-
-Reference card entry, in `src/reference.html`:
-
-```html
-<h2>The refresh token function</h2>
-<p>Discussed in part 2, under "How a token gets refreshed".</p>
+<p>The refresh token function takes a user ID and returns a token for that user, getting a fresh one when the current token is missing or about to expire. The code is shown below.</p>
+<p>The function starts by looking up the user's current token in the token store. If there's no token, or the token has less than 60 seconds left, the function asks the auth client for a fresh token. It passes along the old token's refresh token, if there was an old token. Then the function saves the fresh token to the token store and returns the fresh token.</p>
+<p>If the existing token has at least a minute left, the function returns the existing token unchanged.</p>
+<figure>
 <pre><code>export async function refreshToken(userId: string) {
   const token = await tokenStore.get(userId);
-  ...
+  if (!token || token.expiresAt &lt; Date.now() + 60_000) {
+    const fresh = await authClient.refresh(token?.refreshToken);
+    await tokenStore.set(userId, fresh);
+    return fresh;
+  }
+  return token;
 }</code></pre>
+<figcaption>The refresh token function</figcaption>
+</figure>
 ```
 
-On the real card, include the full code rather than an ellipsis. The narration follows the code's actual logic in order, including the edge case where there's no old token, without reading any syntax aloud.
+The narration follows the code's actual logic in order, including the edge case where there's no old token, without reading any syntax aloud. It doesn't claim the fresh token is good for at least a minute, because the code never checks the fresh token. The code sits in a figure right after its narration, with `<` escaped. A long listing, like a whole file, would go on the reference card instead, under an `h2` that says where it's discussed: "Discussed in part 2, under How a token gets refreshed".
 
 ## 5. Dense, symbol-heavy prose
 
@@ -110,10 +119,10 @@ Output:
 
 ```html
 <p>The worker checks the queue for new messages every five seconds by default. That interval is configurable through the poll interval setting, which is measured in milliseconds. The exact setting name is on the reference card.</p>
-<p>The worker processes messages in batches of up to fifty at a time. When processing fails, it retries using exponential backoff, which means it waits longer after each failed attempt. It also adds jitter, a small random amount of extra delay on each wait. After five retries, a message that still fails goes to the dead letter queue, which is where messages that can't be processed are set aside.</p>
+<p>The worker processes messages in batches of up to fifty at a time. When processing fails, the worker retries with exponential backoff and jitter, up to five times. A message that still fails after five retries goes to the dead letter queue.</p>
 ```
 
-One crammed sentence becomes five plain ones. Every symbol and abbreviation is now a word, and the two jargon terms each get a one-clause definition.
+One crammed sentence becomes six plain ones, and every symbol and abbreviation is now a word. Exponential backoff, jitter, and dead letter queues are everyday developer terms, so they aren't defined. A niche or project-specific term would get a one-clause definition the first time it comes up.
 
 ## 6. A finding from an AI-generated analysis report
 
@@ -156,12 +165,24 @@ Source:
 Output:
 
 ```html
-<p>The diagram shows how a request moves through four services, plus a message bus. The original diagram is on the reference card.</p>
+<p>The diagram has five boxes: a client, an API gateway, an orders service, an auth service, and a Service Bus. The diagram is shown below.</p>
 <p>A request starts at the client and goes to the API gateway. From the gateway, the request goes on to the orders service. The gateway also connects down to the auth service. The diagram doesn't label that connection, so it doesn't say whether the gateway calls the auth service on every request or only some of the time.</p>
 <p>Finally, the orders service publishes to the Service Bus. That's the only arrow in the diagram with a label.</p>
+<figure>
+<pre><code>┌──────────┐     ┌──────────────┐     ┌────────────┐
+│  Client  │────▶│  API Gateway │────▶│ Orders svc │
+└──────────┘     └──────┬───────┘     └─────┬──────┘
+                        │                   │ publishes
+                        ▼                   ▼
+                 ┌──────────────┐     ┌────────────┐
+                 │  Auth svc    │     │ Service Bus│
+                 └──────────────┘     └────────────┘</code></pre>
+</figure>
 ```
 
-The tour follows the flow from start to end. The unlabeled arrow is described as unlabeled rather than given a guessed meaning. The labeled arrow is described by its label and nothing more. It would be tempting to add that publishing means the orders service doesn't wait for a reply, but the diagram doesn't say that.
+If the source's diagram were Mermaid, the figure would hold `<pre class="mermaid">` with the Mermaid text, and the page would render it as a real diagram.
+
+The opening names what's in the diagram without claiming more flow than the arrows show. The tour follows the flow from start to end. The unlabeled arrow is described as unlabeled rather than given a guessed meaning. The labeled arrow is described by its label and nothing more. It would be tempting to add that publishing means the orders service doesn't wait for a reply, but the diagram doesn't say that.
 
 ## 8. A source that contradicts itself
 
